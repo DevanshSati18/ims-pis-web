@@ -27,30 +27,34 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="p-6 border rounded w-96 space-y-4">
-        <h1 className="text-xl font-semibold">Login</h1>
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-2xl font-semibold text-center mb-6">
+          Inventory Management System
+        </h1>
 
-        <input
-          className="border p-2 w-full"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="space-y-4">
+          <input
+            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <input
-          className="border p-2 w-full"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <input
+            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <button
-          className="bg-black text-white w-full py-2"
-          onClick={handleLogin}
-        >
-          Login
-        </button>
+          <button
+            onClick={handleLogin}
+            className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition"
+          >
+            Login
+          </button>
+        </div>
       </div>
     </div>
   );
