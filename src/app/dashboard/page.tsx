@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Header from "@/components/Header";
+import InventoryPanel from "@/components/InventoryPanel";
 import { fetchDepartments } from "@/store/departmentSlice";
 import { fetchSubDepartments } from "@/store/subDepartmentSlice";
+import { fetchInventoryBySubDept } from "@/store/inventorySlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
-  const departments = useAppSelector(
-    (state) => state.departments
-  );
-  const subDepartments = useAppSelector(
-    (state) => state.subDepartments
-  );
+  const departments = useAppSelector((s) => s.departments);
+  const subDepartments = useAppSelector((s) => s.subDepartments);
+
+  const [selectedSubDept, setSelectedSubDept] =
+    useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchDepartments());
@@ -26,10 +27,14 @@ export default function DashboardPage() {
     });
   }, [departments, dispatch]);
 
+  const handleSubDeptClick = (key: string) => {
+    setSelectedSubDept(key);
+    dispatch(fetchInventoryBySubDept(key));
+  };
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col">
-        {/* Header */}
         <Header />
 
         <div className="flex flex-1">
@@ -42,19 +47,28 @@ export default function DashboardPage() {
                 <div className="font-semibold">{d.name}</div>
                 <ul className="ml-4 text-sm">
                   {(subDepartments[d.key] || []).map((s) => (
-                    <li key={s.key}>{s.name}</li>
+                    <li key={s.key}>
+                      <button
+                        className={`hover:underline ${
+                          selectedSubDept === s.key
+                            ? "font-semibold"
+                            : ""
+                        }`}
+                        onClick={() => handleSubDeptClick(s.key)}
+                      >
+                        {s.name}
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
             ))}
           </aside>
 
-          {/* Main Content */}
+          {/* Main */}
           <main className="flex-1 p-6">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="mt-2 text-gray-600">
-              Logout & header integrated successfully.
-            </p>
+            <h1 className="text-2xl font-bold mb-4">Inventory</h1>
+            <InventoryPanel subDepartmentKey={selectedSubDept} />
           </main>
         </div>
       </div>
