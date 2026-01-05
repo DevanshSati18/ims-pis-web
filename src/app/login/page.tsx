@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { api } from "@/services/api";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setUser } from "@/store/authSlice";
 import { useRouter } from "next/navigation";
+import { api } from "@/services/api";
+import { setUser } from "@/store/authSlice";
 import { RootState } from "@/store/store";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { user, loading } = useSelector(
+    (state: RootState) => state.auth
+  );
   const dispatch = useDispatch();
   const router = useRouter();
-  const { user } = useSelector((state: RootState) => state.auth);
 
-  if (user) {
-    router.push("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && user) router.push("/dashboard");
+  }, [loading, user, router]);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
     const res = await api.post("/auth/login", { email, password });
@@ -26,35 +28,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-semibold text-center mb-6">
-          Inventory Management System
-        </h1>
-
-        <div className="space-y-4">
-          <input
-            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <input
-            className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button
-            onClick={handleLogin}
-            className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition"
-          >
-            Login
-          </button>
-        </div>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-80 space-y-3 rounded border p-6">
+        <h1 className="text-xl font-bold">Login</h1>
+        <input
+          className="w-full border p-2"
+          placeholder="Email"
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="w-full border p-2"
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          className="w-full bg-blue-600 p-2 text-white"
+          onClick={handleLogin}
+        >
+          Login
+        </button>
       </div>
     </div>
   );

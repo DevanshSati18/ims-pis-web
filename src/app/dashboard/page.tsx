@@ -1,58 +1,62 @@
 "use client";
 
+import { useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useAuthInit } from "@/hooks/useAuthInit";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/store/store";
-import { api } from "@/services/api";
-import { clearUser } from "@/store/authSlice";
+import Header from "@/components/Header";
+import { fetchDepartments } from "@/store/departmentSlice";
+import { fetchSubDepartments } from "@/store/subDepartmentSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function DashboardPage() {
-  useAuthInit();
-  const { user } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
+  const departments = useAppSelector(
+    (state) => state.departments
+  );
+  const subDepartments = useAppSelector(
+    (state) => state.subDepartments
+  );
 
-  const logout = async () => {
-    await api.post("/auth/logout");
-    dispatch(clearUser());
-  };
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
+
+  useEffect(() => {
+    departments.forEach((d) => {
+      dispatch(fetchSubDepartments(d.key));
+    });
+  }, [departments, dispatch]);
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-black text-white p-6">
-          <h2 className="text-lg font-semibold mb-6">IMS Dashboard</h2>
+      <div className="flex min-h-screen flex-col">
+        {/* Header */}
+        <Header />
 
-          <ul className="space-y-3 text-sm">
-            <li className="opacity-80">Home</li>
-            <li className="opacity-80">Departments</li>
-            <li className="opacity-80">Reports</li>
-          </ul>
-        </aside>
+        <div className="flex flex-1">
+          {/* Sidebar */}
+          <aside className="w-64 border-r p-4">
+            <h2 className="mb-4 font-bold">Departments</h2>
 
-        {/* Main content */}
-        <main className="flex-1 p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold">
-              Welcome, {user?.role}
-            </h1>
+            {departments.map((d) => (
+              <div key={d.key} className="mb-3">
+                <div className="font-semibold">{d.name}</div>
+                <ul className="ml-4 text-sm">
+                  {(subDepartments[d.key] || []).map((s) => (
+                    <li key={s.key}>{s.name}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </aside>
 
-            <button
-              onClick={logout}
-              className="border px-4 py-2 rounded-md hover:bg-gray-200 transition"
-            >
-              Logout
-            </button>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600">
-              Phase 2A structure is ready. Departments and sub-departments
-              will appear here next.
+          {/* Main Content */}
+          <main className="flex-1 p-6">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="mt-2 text-gray-600">
+              Logout & header integrated successfully.
             </p>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </ProtectedRoute>
   );
