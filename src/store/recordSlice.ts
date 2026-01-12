@@ -1,42 +1,48 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/services/api";
+import { RecordItem } from "@/types/record";
 
-export interface CreateRecordPayload {
-  departmentKey: string;
-  subDepartmentKey: string;
-  title: string;
-  data: Record<string, string | number | boolean>;
-}
-
-export interface UploadFilePayload {
-  recordId: string;
-  fieldKey: string;
-  file: File;
-}
+export const fetchRecords = createAsyncThunk(
+  "records/fetch",
+  async (params: {
+    departmentKey: string;
+    subDepartmentKey: string;
+  }) => {
+    const res = await api.get<RecordItem[]>("/records", {
+      params,
+    });
+    return res.data;
+  }
+);
 
 export const createRecord = createAsyncThunk(
   "records/create",
-  async (payload: CreateRecordPayload) => {
-    const res = await api.post("/records", payload);
+  async (payload: {
+    departmentKey: string;
+    subDepartmentKey: string;
+    title: string;
+    data: Record<string, string | number | boolean>;
+  }) => {
+    const res = await api.post<RecordItem>("/records", payload);
     return res.data;
   }
 );
 
 export const uploadRecordFile = createAsyncThunk(
   "records/uploadFile",
-  async (payload: UploadFilePayload) => {
+  async (payload: {
+    recordId: string;
+    fieldKey: string;
+    file: File;
+  }) => {
     const form = new FormData();
     form.append("fieldKey", payload.fieldKey);
     form.append("files", payload.file);
 
-    const res = await api.post(
+    const res = await api.post<RecordItem>(
       `/records/${payload.recordId}/documents`,
       form,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
 
     return res.data;
@@ -44,11 +50,13 @@ export const uploadRecordFile = createAsyncThunk(
 );
 
 interface RecordState {
-  creating: boolean;
+  items: RecordItem[];
+  loading: boolean;
 }
 
 const initialState: RecordState = {
-  creating: false,
+  items: [],
+  loading: false,
 };
 
 const recordSlice = createSlice({
@@ -57,14 +65,15 @@ const recordSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(createRecord.pending, (state) => {
-        state.creating = true;
+      .addCase(fetchRecords.pending, (state) => {
+        state.loading = true;
       })
-      .addCase(createRecord.fulfilled, (state) => {
-        state.creating = false;
+      .addCase(fetchRecords.fulfilled, (state, action) => {
+        state.items = action.payload;
+        state.loading = false;
       })
-      .addCase(createRecord.rejected, (state) => {
-        state.creating = false;
+      .addCase(fetchRecords.rejected, (state) => {
+        state.loading = false;
       });
   },
 });

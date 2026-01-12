@@ -8,7 +8,7 @@ import {
 } from "@/store/recordSlice";
 import DynamicForm from "./DynamicForm";
 import FileUploadField from "./FileUploadField";
-import { SubDepartment } from "@/types/Schema";
+import { SubDepartment } from "@/types/schema";
 
 interface Props {
   departmentKey: string;

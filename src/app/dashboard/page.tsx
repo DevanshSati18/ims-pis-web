@@ -8,6 +8,8 @@ import { fetchDepartments } from "@/store/departmentSlice";
 import { fetchSubDepartments } from "@/store/subDepartmentSlice";
 import { fetchInventoryBySubDept } from "@/store/inventorySlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchRecords } from "@/store/recordSlice";
+import RecordList from "@/components/RecordList";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();

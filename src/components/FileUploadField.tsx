@@ -1,6 +1,6 @@
 "use client";
 
-import { SubDepartmentField } from "@/types/Schema";
+import { SubDepartmentField } from "@/types/schema";
 
 interface Props {
   field: SubDepartmentField;
