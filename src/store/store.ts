@@ -7,6 +7,7 @@ import recordReducer from "./recordSlice";
 import adminDepartmentReducer from "./adminDepartmentSlice";
 import adminSubDepartmentReducer from "./adminSubDepartmentSlice";
 import adminUserReducer from "./adminUserSlice";
+import adminPermissionsReducer from "./adminPermissionSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -16,7 +17,8 @@ export const store = configureStore({
     records: recordReducer,
     adminDepartments: adminDepartmentReducer,
     adminSubDepartments: adminSubDepartmentReducer,
-    adminUsers : adminUserReducer
+    adminUsers : adminUserReducer,
+    adminPermissions : adminPermissionsReducer
   },
 });
 
