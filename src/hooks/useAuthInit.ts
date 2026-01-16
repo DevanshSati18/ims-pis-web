@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { api } from "@/services/api";
-import { setUser, clearUser, stopLoading } from "@/store/authSlice";
+import { setUser, clearUser } from "@/store/authSlice"; // ✅ NO stopLoading
 
 export const useAuthInit = () => {
   const dispatch = useDispatch();
@@ -11,8 +11,11 @@ export const useAuthInit = () => {
   useEffect(() => {
     api
       .get("/auth/me")
-      .then((res) => dispatch(setUser(res.data)))
-      .catch(() => dispatch(clearUser()))
-      .finally(() => dispatch(stopLoading()));
+      .then((res) => {
+        dispatch(setUser(res.data));
+      })
+      .catch(() => {
+        dispatch(clearUser());
+      });
   }, [dispatch]);
 };

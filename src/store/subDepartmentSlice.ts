@@ -1,35 +1,28 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/services/api";
-
-export interface SubDepartment {
-  _id: string;
-  name: string;
-  key: string;
-  departmentKey: string;
-}
+import { SubDepartment } from "@/types/schema"; // ✅ USE SHARED TYPE
 
 export const fetchSubDepartments = createAsyncThunk(
   "subDepartments/fetch",
   async (departmentKey: string) => {
-    const res = await api.get(`/sub-departments/${departmentKey}`);
-    return {
-      departmentKey,
-      data: res.data as SubDepartment[],
-    };
+    const res = await api.get<SubDepartment[]>(
+      `/sub-departments/${departmentKey}`
+    );
+    return { departmentKey, items: res.data };
   }
 );
 
-interface State {
-  [departmentKey: string]: SubDepartment[];
-}
+type SubDepartmentState = Record<string, SubDepartment[]>;
+
+const initialState: SubDepartmentState = {};
 
 const subDepartmentSlice = createSlice({
   name: "subDepartments",
-  initialState: {} as State,
+  initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(fetchSubDepartments.fulfilled, (state, action) => {
-      state[action.payload.departmentKey] = action.payload.data;
+      state[action.payload.departmentKey] = action.payload.items;
     });
   },
 });
