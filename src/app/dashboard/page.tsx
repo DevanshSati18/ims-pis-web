@@ -13,6 +13,28 @@ import { fetchRecords } from "@/store/recordSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { SubDepartment } from "@/types/schema";
 
+/* ================= PERMISSION HELPERS (FRONTEND) ================= */
+
+const hasReadAccess = (
+  permissions: string[],
+  deptKey: string,
+  subKey: string
+) =>
+  permissions.some(
+    (p) =>
+      p === `${deptKey}:${subKey}:read` ||
+      p === `${deptKey}:${subKey}:write`
+  );
+
+const hasWriteAccess = (
+  permissions: string[],
+  deptKey: string,
+  subKey: string
+) =>
+  permissions.includes(`${deptKey}:${subKey}:write`);
+
+/* ================================================================= */
+
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
 
@@ -21,16 +43,18 @@ export default function DashboardPage() {
   const records = useAppSelector((s) => s.records.items);
   const user = useAppSelector((s) => s.auth.user);
 
+  const permissions = user?.visibleSubDepartments || [];
+
   const [activeDept, setActiveDept] = useState<string | null>(null);
   const [activeSubDept, setActiveSubDept] =
     useState<SubDepartment | null>(null);
 
-  /* Load departments */
+  /* ---------------- LOAD DATA ---------------- */
+
   useEffect(() => {
     dispatch(fetchDepartments());
   }, [dispatch]);
 
-  /* Load sub-departments for all departments */
   useEffect(() => {
     departments.forEach((d) => {
       dispatch(fetchSubDepartments(d.key));
@@ -42,14 +66,12 @@ export default function DashboardPage() {
   const visibleDepartments = useMemo(() => {
     if (user?.role === "admin") return departments;
 
-    const allowed = user?.visibleSubDepartments || [];
-
     return departments.filter((dept) =>
       (subDepartments[dept.key] || []).some((sd) =>
-        allowed.includes(`${dept.key}:${sd.key}`)
+        hasReadAccess(permissions, dept.key, sd.key)
       )
     );
-  }, [departments, subDepartments, user]);
+  }, [departments, subDepartments, permissions, user]);
 
   const visibleSubDepartments = useMemo(() => {
     if (!activeDept) return [];
@@ -58,11 +80,10 @@ export default function DashboardPage() {
 
     if (user?.role === "admin") return all;
 
-    const allowed = user?.visibleSubDepartments || [];
     return all.filter((sd) =>
-      allowed.includes(`${activeDept}:${sd.key}`)
+      hasReadAccess(permissions, activeDept, sd.key)
     );
-  }, [activeDept, subDepartments, user]);
+  }, [activeDept, subDepartments, permissions, user]);
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -96,7 +117,7 @@ export default function DashboardPage() {
             {activeSubDept && ` / ${activeSubDept.name}`}
           </div>
 
-          {/* STEP 1: DEPARTMENT CARDS */}
+          {/* STEP 1: DEPARTMENTS */}
           {!activeDept && (
             <>
               <h1 className="mb-6 text-2xl font-semibold">
@@ -124,13 +145,13 @@ export default function DashboardPage() {
 
               {visibleDepartments.length === 0 && (
                 <div className="text-gray-500">
-                  No departments available.
+                  No departments assigned to you.
                 </div>
               )}
             </>
           )}
 
-          {/* STEP 2: SUB-DEPARTMENT BUTTONS */}
+          {/* STEP 2: SUB-DEPARTMENTS */}
           {activeDept && !activeSubDept && (
             <>
               <h1 className="mb-6 text-2xl font-semibold">
@@ -160,17 +181,29 @@ export default function DashboardPage() {
             </>
           )}
 
-          {/* STEP 3: RECORD VIEW */}
+          {/* STEP 3: RECORDS */}
           {activeDept && activeSubDept && (
             <>
               <h1 className="mb-4 text-2xl font-semibold">
                 {activeSubDept.name}
               </h1>
 
-              <RecordCreatePanel
-                departmentKey={activeDept}
-                subDepartment={activeSubDept}
-              />
+              {/* WRITE ACCESS CHECK */}
+              {user?.role === "admin" ||
+              hasWriteAccess(
+                permissions,
+                activeDept,
+                activeSubDept.key
+              ) ? (
+                <RecordCreatePanel
+                  departmentKey={activeDept}
+                  subDepartment={activeSubDept}
+                />
+              ) : (
+                <div className="mb-4 rounded border bg-gray-100 p-3 text-sm text-gray-600">
+                  You have read-only access to this section.
+                </div>
+              )}
 
               <div className="mt-8">
                 <RecordList records={records} />
