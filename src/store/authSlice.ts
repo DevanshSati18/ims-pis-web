@@ -3,10 +3,12 @@ import { User } from "@/types/auth";
 
 interface AuthState {
   user: User | null;
+  loading : boolean
 }
 
 const initialState: AuthState = {
   user: null,
+  loading : true
 };
 
 const authSlice = createSlice({

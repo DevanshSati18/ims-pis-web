@@ -11,15 +11,15 @@ import {
   createSubDepartmentAdmin,
   deleteSubDepartmentAdmin,
 } from "@/store/adminSubDepartmentSlice";
-import { SubDepartmentField } from "@/types/schema";
+import { SubDepartmentField, FieldType } from "@/types/schema"; // <-- Imported FieldType
 
 // Local interface for our dynamic form builder
 interface DynamicField {
   id: string; // Used locally for React keys to ensure smooth deleting/reordering
   name: string;
-  type: "string" | "integer" | "date" | "file" | "boolean";
+  type: FieldType; // <-- Now uses the exact types from your schema
   required: boolean;
-  editable: boolean; // NEW: Controls if the field can be updated later
+  editable: boolean; 
 }
 
 export default function AdminSubDepartmentsPage() {
@@ -49,14 +49,13 @@ export default function AdminSubDepartmentsPage() {
       {
         id: Math.random().toString(36).substring(7),
         name: "",
-        type: "string",
+        type: "text", // <-- Defaulted to "text" instead of "string"
         required: false,
-        editable: false, // Default to false, as most fields (like quantity) will be editable
+        editable: false, 
       },
     ]);
   };
 
-  // Fixed TypeScript: value can now properly accept boolean for our checkboxes
   const updateField = (id: string, key: keyof DynamicField, value: string | boolean) => {
     setFields((prev) =>
       prev.map((field) => (field.id === id ? { ...field, [key]: value } : field))
@@ -81,7 +80,7 @@ export default function AdminSubDepartmentsPage() {
       key: f.name.trim().toLowerCase().replace(/\s+/g, "_"),
       type: f.type,
       required: f.required,
-      editable: f.editable, // Included in the submission payload
+      editable: f.editable,
     }));
 
     dispatch(
@@ -238,10 +237,10 @@ export default function AdminSubDepartmentsPage() {
                               <select
                                 className="w-full rounded-lg border border-[var(--border-main)] bg-[var(--bg-subtle)] px-3 py-2 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary-soft)]"
                                 value={field.type}
-                                onChange={(e) => updateField(field.id, "type", e.target.value)}
+                                onChange={(e) => updateField(field.id, "type", e.target.value as FieldType)}
                               >
-                                <option value="string">Text (String)</option>
-                                <option value="integer">Number (Integer)</option>
+                                <option value="text">Text (String)</option>
+                                <option value="number">Number (Integer)</option>
                                 <option value="date">Date</option>
                                 <option value="file">File Upload</option>
                                 <option value="boolean">Yes/No (Boolean)</option>

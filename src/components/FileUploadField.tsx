@@ -14,7 +14,7 @@ export default function FileUploadField({
   return (
     <div>
       <label className="block text-sm font-medium">
-        {field.label}
+        {field.name}
         {field.required && " *"}
       </label>
 

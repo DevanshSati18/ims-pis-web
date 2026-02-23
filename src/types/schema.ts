@@ -8,9 +8,10 @@ export type FieldType =
 
 export interface SubDepartmentField {
   key: string;
-  label: string;
+  name: string;
   type: FieldType;
   required: boolean;
+ editable : boolean
 }
 
 export interface SubDepartment {

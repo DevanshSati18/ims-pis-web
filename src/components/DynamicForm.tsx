@@ -20,7 +20,7 @@ export default function DynamicForm({
         .map((field) => (
           <div key={field.key}>
             <label className="block text-sm font-medium">
-              {field.label}
+              {field.name}
               {field.required && " *"}
             </label>
 
