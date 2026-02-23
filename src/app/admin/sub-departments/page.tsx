@@ -11,13 +11,13 @@ import {
   createSubDepartmentAdmin,
   deleteSubDepartmentAdmin,
 } from "@/store/adminSubDepartmentSlice";
-import { SubDepartmentField, FieldType } from "@/types/schema"; // <-- Imported FieldType
+import { SubDepartmentField, FieldType } from "@/types/schema";
 
 // Local interface for our dynamic form builder
 interface DynamicField {
   id: string; 
   name: string;
-  type: FieldType; // <-- Now uses the exact types from your schema
+  type: FieldType;
   required: boolean;
   editable: boolean; 
 }
@@ -50,9 +50,9 @@ export default function AdminSubDepartmentsPage() {
       {
         id: Math.random().toString(36).substring(7),
         name: "",
-        type: "string",
+        type: "text", // FIXED: Changed from "string" to match FieldType
         required: false,
-        editable: false, // Default to false, as most fields (like quantity) will be editable
+        editable: false, 
       },
     ]);
   };
@@ -103,22 +103,30 @@ export default function AdminSubDepartmentsPage() {
       const generateKey = (str: string) => 
         str.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    // Format fields to match the Redux schema
-    const formattedFields: SubDepartmentField[] = fields.map((f) => ({
-      name: f.name.trim(),
-      key: f.name.trim().toLowerCase().replace(/\s+/g, "_"),
-      type: f.type,
-      required: f.required,
-      editable: f.editable, // Included in the submission payload
-    }));
+      // FIXED: Actually use the function to generate the key
+      const sdKey = generateKey(name);
 
-    dispatch(
-      createSubDepartmentAdmin({
-        departmentKey: selectedDept,
-        key: sdKey,
-        name: name.trim(),
-        fields: formattedFields,
-      })).unwrap();
+      // Format fields to match the Redux schema
+      const formattedFields: SubDepartmentField[] = fields.map((f) => ({
+        name: f.name.trim(),
+        key: generateKey(f.name), // Use bulletproof generation for fields too
+        type: f.type,
+        required: f.required,
+        editable: f.editable, 
+      }));
+
+      // Call the debugger for visibility
+      logSchemaPayload(selectedDept, sdKey, name.trim(), formattedFields);
+
+      // FIXED: Added `await` and passed the correct `sdKey`
+      await dispatch(
+        createSubDepartmentAdmin({
+          departmentKey: selectedDept,
+          key: sdKey,
+          name: name.trim(),
+          fields: formattedFields,
+        })
+      ).unwrap();
 
       // 5. Force Refetch
       dispatch(fetchSubDepartmentsAdmin(selectedDept));
@@ -273,13 +281,14 @@ export default function AdminSubDepartmentsPage() {
                               />
                             </div>
                             <div className="w-full sm:w-40">
+                              {/* FIXED: Mapped option values strictly to FieldType string literals */}
                               <select
                                 className="w-full rounded-lg border border-[var(--border-main)] bg-[var(--bg-subtle)] px-3 py-2 text-sm outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary-soft)]"
                                 value={field.type}
                                 onChange={(e) => updateField(field.id, "type", e.target.value as FieldType)}
                               >
-                                <option value="string">Text (String)</option>
-                                <option value="integer">Number (Integer)</option>
+                                <option value="text">Text (String)</option>
+                                <option value="number">Number (Integer)</option>
                                 <option value="date">Date</option>
                                 <option value="file">File Upload</option>
                                 <option value="boolean">Yes/No</option>

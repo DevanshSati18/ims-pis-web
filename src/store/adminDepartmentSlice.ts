@@ -20,7 +20,7 @@ export const deleteDepartmentAdmin = createAsyncThunk(
     try {
       await api.delete(`/departments/${key}`);
       return key; // Return the key so we know which one to remove from state
-    } catch (error: unknown) {
+    } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to delete department");
     }
   }

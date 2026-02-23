@@ -177,13 +177,29 @@ export default function RecordList({ records, subDepartment }: Props) {
                           )}
                         </div>
 
+                        {/* FIXED: Added Boolean dropdown support and mapped "number" correctly */}
                         {isFieldEditable ? (
-                          <input
-                            className="w-full rounded-md border border-[var(--border-main)] px-3 py-1.5 text-sm outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
-                            value={editData[key] as string}
-                            type={schemaField?.type === "integer" ? "number" : schemaField?.type === "date" ? "date" : "text"}
-                            onChange={(e) => setEditData((prev) => ({ ...prev, [key]: e.target.value }))}
-                          />
+                          schemaField?.type === "boolean" ? (
+                            <select
+                              className="w-full rounded-md border border-[var(--border-main)] px-3 py-1.5 text-sm outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
+                              value={editData[key] !== undefined ? String(editData[key]) : ""}
+                              onChange={(e) => setEditData((prev) => ({ ...prev, [key]: e.target.value === "true" }))}
+                            >
+                              <option value="" disabled>Select option...</option>
+                              <option value="true">Yes</option>
+                              <option value="false">No</option>
+                            </select>
+                          ) : (
+                            <input
+                              className="w-full rounded-md border border-[var(--border-main)] px-3 py-1.5 text-sm outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
+                              value={(editData[key] as string | number) || ""}
+                              type={schemaField?.type === "number" ? "number" : schemaField?.type === "date" ? "date" : "text"}
+                              onChange={(e) => setEditData((prev) => ({ 
+                                ...prev, 
+                                [key]: schemaField?.type === "number" ? Number(e.target.value) : e.target.value 
+                              }))}
+                            />
+                          )
                         ) : (
                           <div className="text-sm font-medium text-[var(--text-main)]">
                             {typeof value === 'boolean' ? (value ? "Yes" : "No") : String(value || "—")}
@@ -199,7 +215,8 @@ export default function RecordList({ records, subDepartment }: Props) {
                   <div className="mt-6 border-t border-[var(--border-main)] pt-5">
                     <h4 className="mb-3 text-sm font-semibold text-[var(--text-main)]">Attached Documents</h4>
                     <div className="flex flex-wrap gap-3">
-                      {record.documents.map((doc: unknown) => (
+                      {/* FIXED: Changed unknown to any */}
+                      {record.documents.map((doc: any) => (
                         <a
                           key={doc.fileName}
                           href={`/api/uploads/${doc.fileName}`}

@@ -162,8 +162,8 @@ export default function RecordCreatePanel({
                         {field.name} {field.required && <span className="text-[var(--danger)]">*</span>}
                       </label>
 
-                      {/* Render different inputs based on schema type */}
-                      {field.type === "string" && (
+                      {/* FIXED: Changed "string" to "text" to match FieldType */}
+                      {field.type === "text" && (
                         <input
                           type="text"
                           className="w-full rounded-lg border border-[var(--border-main)] bg-white px-3 py-2 text-sm outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
@@ -173,7 +173,8 @@ export default function RecordCreatePanel({
                         />
                       )}
 
-                      {field.type === "integer" && (
+                      {/* FIXED: Changed "integer" to "number" to match FieldType */}
+                      {field.type === "number" && (
                         <input
                           type="number"
                           className="w-full rounded-lg border border-[var(--border-main)] bg-white px-3 py-2 text-sm outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]"
@@ -296,7 +297,8 @@ export default function RecordCreatePanel({
               </div>
             ) : (
               <div className="flex flex-col gap-1.5 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-                {records.map((record: unknwon) => (
+                {/* FIXED: Changed 'unknwon' to 'any' to fix TypeScript error */}
+                {records.map((record: any) => (
                   <div
                     key={record._id}
                     className="group flex flex-col justify-between gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-[var(--border-main)] hover:bg-[var(--bg-hover)] sm:flex-row sm:items-center sm:p-4"
