@@ -8,41 +8,70 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   fetchDepartmentsAdmin,
   createDepartmentAdmin,
+  deleteDepartmentAdmin, // WE WILL ADD THIS TO REDUX NEXT
 } from "@/store/adminDepartmentSlice";
 
 export default function AdminDepartmentsPage() {
   const dispatch = useAppDispatch();
-  const { items, loading } = useAppSelector(
-    (s) => s.adminDepartments
-  );
+  const { items, loading } = useAppSelector((s) => s.adminDepartments);
 
   const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // --- DELETE MODAL STATE ---
+  const [deptToDelete, setDeptToDelete] = useState<{ key: string; name: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDepartmentsAdmin());
   }, [dispatch]);
 
-  const handleCreate = () => {
-    // Prevent empty submissions
+  /* ---------------- CREATE HANDLER ---------------- */
+  const handleCreate = async () => {
     if (!name.trim()) return;
+    setIsSubmitting(true);
 
-    // Automatically generate the key: lowercase and replace spaces with underscores
-    const generatedKey = name.trim().toLowerCase().replace(/\s+/g, "_");
-
-    dispatch(createDepartmentAdmin({ name: name.trim(), key: generatedKey }));
-    setName("");
+    try {
+      const generatedKey = name.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "_");
+      await dispatch(createDepartmentAdmin({ name: name.trim(), key: generatedKey })).unwrap();
+      setName("");
+    } catch (error) {
+      alert("Failed to create department. It may already exist.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Allow pressing "Enter" to submit
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleCreate();
+    if (e.key === "Enter") handleCreate();
+  };
+
+  /* ---------------- DELETE HANDLER ---------------- */
+  const confirmDelete = async () => {
+    if (!deptToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      await dispatch(deleteDepartmentAdmin(deptToDelete.key)).unwrap();
+      // Close modal and reset text on success
+      setDeptToDelete(null);
+      setDeleteConfirmText("");
+    } catch (error) {
+      alert("Failed to delete department. Ensure you have backend permissions.");
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeptToDelete(null);
+    setDeleteConfirmText("");
   };
 
   return (
     <AdminRoute>
-      <div className="flex min-h-screen flex-col bg-(--bg-subtle) text-[var(--text-main)]">
+      <div className="flex min-h-screen flex-col bg-[var(--bg-subtle)] text-[var(--text-main)]">
         <Header />
 
         <main className="mx-auto w-full max-w-5xl p-6 sm:p-8">
@@ -94,14 +123,14 @@ export default function AdminDepartmentsPage() {
                 
                 <button
                   onClick={handleCreate}
-                  disabled={!name.trim()}
+                  disabled={!name.trim() || isSubmitting}
                   className={`flex h-[42px] w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all sm:w-auto
-                    ${!name.trim() 
+                    ${(!name.trim() || isSubmitting) 
                       ? 'cursor-not-allowed bg-[var(--primary-light)] opacity-70' 
                       : 'bg-[var(--primary)] shadow-sm hover:bg-[var(--secondary)] hover:shadow-md active:scale-95'
                     }`}
                 >
-                  <span>Add Department</span>
+                  {isSubmitting ? 'Adding...' : 'Add Department'}
                 </button>
               </div>
             </div>
@@ -133,7 +162,7 @@ export default function AdminDepartmentsPage() {
               {!loading && items.map((d) => (
                 <div
                   key={d.key}
-                  className="group flex flex-col justify-between border-b border-[var(--border-main)] p-5 transition-colors hover:bg-[var(--bg-hover)] last:border-b-0 sm:flex-row sm:items-center"
+                  className="group flex flex-col justify-between gap-4 border-b border-[var(--border-main)] p-5 transition-colors hover:bg-[var(--bg-hover)] last:border-b-0 sm:flex-row sm:items-center"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-subtle)] text-[var(--text-muted)] transition-colors group-hover:bg-[var(--primary-soft)] group-hover:text-[var(--primary)]">
@@ -146,17 +175,79 @@ export default function AdminDepartmentsPage() {
                         {d.name}
                       </div>
                       <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                        <span className="rounded bg-[var(--border-main)] px-1.5 py-0.5 font-mono text-[10px] uppercase text-[var(--text-main)]">Generated Key</span>
+                        <span className="rounded bg-[var(--border-main)] px-1.5 py-0.5 font-mono text-[10px] uppercase text-[var(--text-main)]">Key</span>
                         {d.key}
                       </div>
                     </div>
                   </div>
+
+                  {/* Trigger Delete Modal */}
+                  <button
+                    onClick={() => setDeptToDelete({ key: d.key, name: d.name })}
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 opacity-0 transition-all hover:border-red-200 hover:bg-red-100 hover:text-red-700 group-hover:opacity-100 focus:opacity-100 sm:w-auto"
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         </main>
       </div>
+
+      {/* ================= DELETE CONFIRMATION MODAL ================= */}
+      {deptToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md scale-100 rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="mb-4 flex items-center gap-3 text-red-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="font-heading text-xl font-bold">Delete Department?</h3>
+            </div>
+            
+            <p className="mb-4 text-sm text-[var(--text-muted)]">
+              This action cannot be undone. All sub-departments and records inside <strong className="text-[var(--text-main)]">{deptToDelete.name}</strong> will also be deleted or orphaned depending on backend rules.
+            </p>
+
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+              <label className="mb-2 block text-sm font-medium text-red-800">
+                Type <strong>{deptToDelete.name}</strong> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                placeholder={deptToDelete.name}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="rounded-xl border border-[var(--border-main)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteConfirmText !== deptToDelete.name || isDeleting}
+                className={`rounded-xl px-5 py-2 text-sm font-bold text-white transition-all 
+                  ${deleteConfirmText === deptToDelete.name && !isDeleting
+                    ? 'bg-red-600 hover:bg-red-700 shadow-md active:scale-95' 
+                    : 'bg-red-300 cursor-not-allowed'
+                  }`}
+              >
+                {isDeleting ? 'Deleting...' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminRoute>
   );
 }

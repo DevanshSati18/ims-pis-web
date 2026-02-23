@@ -56,6 +56,9 @@ export default function AdminHome() {
                 </svg>
               }
             />
+            
+            {/* PERMISSIONS CARD HIDDEN FROM DASHBOARD 
+                Accessible only through the Users Management page as requested.
             <AdminCard
               title="Permissions"
               href="/admin/permissions"
@@ -66,6 +69,7 @@ export default function AdminHome() {
                 </svg>
               }
             />
+            */}
           </div>
         </main>
       </div>

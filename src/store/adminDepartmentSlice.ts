@@ -13,6 +13,18 @@ export const fetchDepartmentsAdmin = createAsyncThunk(
     return res.data;
   }
 );
+// 1. Add the Thunk
+export const deleteDepartmentAdmin = createAsyncThunk(
+  "adminDepartments/delete",
+  async (key: string, { rejectWithValue }) => {
+    try {
+      await api.delete(`/departments/${key}`);
+      return key; // Return the key so we know which one to remove from state
+    } catch (error: unknown) {
+      return rejectWithValue(error.response?.data || "Failed to delete department");
+    }
+  }
+);
 
 export const createDepartmentAdmin = createAsyncThunk(
   "adminDepartments/create",
@@ -47,6 +59,10 @@ const adminDepartmentSlice = createSlice({
       })
       .addCase(createDepartmentAdmin.fulfilled, (state, action) => {
         state.items.push(action.payload);
+      })
+      .addCase(deleteDepartmentAdmin.fulfilled, (state, action) => {
+        // Remove it from the list instantly
+        state.items = state.items.filter((dept) => dept.key !== action.payload);
       });
   },
 });

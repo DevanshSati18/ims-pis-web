@@ -15,11 +15,11 @@ import { SubDepartmentField } from "@/types/schema";
 
 // Local interface for our dynamic form builder
 interface DynamicField {
-  id: string; // Used locally for React keys to ensure smooth deleting/reordering
+  id: string; 
   name: string;
   type: "string" | "integer" | "date" | "file" | "boolean";
   required: boolean;
-  editable: boolean; // NEW: Controls if the field can be updated later
+  editable: boolean; 
 }
 
 export default function AdminSubDepartmentsPage() {
@@ -30,6 +30,7 @@ export default function AdminSubDepartmentsPage() {
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [name, setName] = useState("");
   const [fields, setFields] = useState<DynamicField[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDepartments());
@@ -50,13 +51,12 @@ export default function AdminSubDepartmentsPage() {
         id: Math.random().toString(36).substring(7),
         name: "",
         type: "string",
-        required: false,
-        editable: false, // Default to false, as most fields (like quantity) will be editable
+        required: true,
+        editable: false, 
       },
     ]);
   };
 
-  // Fixed TypeScript: value can now properly accept boolean for our checkboxes
   const updateField = (id: string, key: keyof DynamicField, value: string | boolean) => {
     setFields((prev) =>
       prev.map((field) => (field.id === id ? { ...field, [key]: value } : field))
@@ -67,56 +67,99 @@ export default function AdminSubDepartmentsPage() {
     setFields((prev) => prev.filter((field) => field.id !== id));
   };
 
+  /* ---------------- PAYLOAD LOGGER (FOR DEBUGGING) ---------------- */
+  
+  const logSchemaPayload = (
+    deptKey: string, 
+    sdKey: string, 
+    sdName: string, 
+    formattedFields: SubDepartmentField[]
+  ) => {
+    console.group("🚀 SUBMITTING NEW SUB-DEPARTMENT SCHEMA");
+    console.log(`📂 Parent Dept Key: "${deptKey}"`);
+    console.log(`📁 Sub-Dept Name: "${sdName}"`);
+    console.log(`🔑 Auto-Generated Sub-Dept Key: "${sdKey}"`);
+    console.log(`📋 Total Custom Fields: ${formattedFields.length}`);
+    console.table(formattedFields);
+    console.log("JSON Payload expected by Backend:", JSON.stringify({
+      departmentKey: deptKey,
+      key: sdKey,
+      name: sdName,
+      fields: formattedFields
+    }, null, 2));
+    console.groupEnd();
+  };
+
   /* ---------------- SUBMISSION HANDLERS ---------------- */
 
-  const handleCreate = () => {
+  const handleCreate = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!selectedDept || !name.trim()) return;
 
-    // Auto-generate Sub-Department Key
-    const sdKey = name.trim().toLowerCase().replace(/\s+/g, "_");
+    setIsSubmitting(true);
 
-    // Format fields to match the Redux schema
-    const formattedFields: SubDepartmentField[] = fields.map((f) => ({
-      name: f.name.trim(),
-      key: f.name.trim().toLowerCase().replace(/\s+/g, "_"),
-      type: f.type,
-      required: f.required,
-      editable: f.editable, // Included in the submission payload
-    }));
+    try {
+      // 1. Bulletproof Key Generation
+      const generateKey = (str: string) => 
+        str.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    dispatch(
-      createSubDepartmentAdmin({
+      const sdKey = generateKey(name);
+
+      // 2. Format fields
+      const formattedFields: SubDepartmentField[] = fields.map((f) => ({
+        name: f.name.trim(),
+        key: generateKey(f.name),
+        type: f.type,
+        required: f.required,
+        editable: f.editable, 
+      }));
+
+      // 3. Log the exact data we are about to send to the backend
+      logSchemaPayload(selectedDept, sdKey, name.trim(), formattedFields);
+
+      // 4. Dispatch Creation
+      await dispatch(createSubDepartmentAdmin({
         departmentKey: selectedDept,
         key: sdKey,
         name: name.trim(),
         fields: formattedFields,
-      })
-    );
+      })).unwrap();
 
-    // Reset form
-    setName("");
-    setFields([]);
+      // 5. Force Refetch
+      dispatch(fetchSubDepartmentsAdmin(selectedDept));
+
+      // 6. Reset form only on success
+      setName("");
+      setFields([]);
+      
+    } catch (error) {
+      console.error("Failed to create Sub-Department:", error);
+      alert("Failed to create the section. Please check if the name already exists or if your backend accepts the new 'editable' parameter.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (sdKey: string) => {
+  const handleDelete = async (sdKey: string) => {
     const confirm = window.confirm(
       "⚠️ This will permanently delete this sub-department and all its fields.\nThis action cannot be undone.\n\nAre you sure?"
     );
 
     if (!confirm) return;
 
-    dispatch(
+    await dispatch(
       deleteSubDepartmentAdmin({
         departmentKey: selectedDept,
         key: sdKey,
       })
     );
+    
+    dispatch(fetchSubDepartmentsAdmin(selectedDept));
   };
 
-  // Validation: Check if main name is empty OR if any added field is missing a name
-  const isFormValid =
-    name.trim().length > 0 &&
-    fields.every((f) => f.name.trim().length > 0);
+  /* ---------------- VALIDATION ---------------- */
+  const hasEmptyCustomField = fields.some((f) => f.name.trim().length === 0);
+  const isFormValid = name.trim().length > 0 && !hasEmptyCustomField;
 
   return (
     <AdminRoute>
@@ -193,7 +236,7 @@ export default function AdminSubDepartmentsPage() {
                     />
                     {name && (
                       <p className="mt-2 text-xs text-[var(--text-light)]">
-                        Generated Key: <strong className="text-[var(--primary)]">{name.trim().toLowerCase().replace(/\s+/g, "_")}</strong>
+                        Generated Key: <strong className="text-[var(--primary)]">{name.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "_")}</strong>
                       </p>
                     )}
                   </div>
@@ -217,10 +260,10 @@ export default function AdminSubDepartmentsPage() {
                       )}
 
                       {fields.map((field, index) => (
-                        <div key={field.id} className="group relative flex flex-col gap-4 rounded-xl border border-[var(--border-main)] bg-white p-4 shadow-sm transition-all hover:border-[var(--primary-light)]">
+                        <div key={field.id} className={`group relative flex flex-col gap-4 rounded-xl border p-4 shadow-sm transition-all ${field.name.trim() === '' ? 'border-red-300 bg-red-50' : 'border-[var(--border-main)] bg-white hover:border-[var(--primary-light)]'}`}>
                           
                           {/* Field Number Badge */}
-                          <div className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-white shadow-sm">
+                          <div className={`absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ${field.name.trim() === '' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'}`}>
                             {index + 1}
                           </div>
 
@@ -228,7 +271,7 @@ export default function AdminSubDepartmentsPage() {
                           <div className="flex flex-col gap-3 sm:flex-row">
                             <div className="flex-1">
                               <input
-                                className="w-full rounded-lg border border-[var(--border-main)] bg-[var(--bg-subtle)] px-3 py-2 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary-soft)]"
+                                className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all focus:ring-2 ${field.name.trim() === '' ? 'border-red-300 bg-white focus:border-[var(--danger)] focus:ring-red-100 placeholder:text-red-300' : 'border-[var(--border-main)] bg-[var(--bg-subtle)] focus:border-[var(--primary)] focus:bg-white focus:ring-[var(--primary-soft)] placeholder:text-[var(--text-light)]'}`}
                                 placeholder="Field Name (e.g. Serial Number)"
                                 value={field.name}
                                 onChange={(e) => updateField(field.id, "name", e.target.value)}
@@ -240,17 +283,17 @@ export default function AdminSubDepartmentsPage() {
                                 value={field.type}
                                 onChange={(e) => updateField(field.id, "type", e.target.value)}
                               >
-                                <option value="string">Text (String)</option>
-                                <option value="integer">Number (Integer)</option>
+                                <option value="string">Text</option>
+                                <option value="integer">Number</option>
                                 <option value="date">Date</option>
                                 <option value="file">File Upload</option>
-                                <option value="boolean">Yes/No (Boolean)</option>
+                                <option value="boolean">Yes/No</option>
                               </select>
                             </div>
                           </div>
 
                           {/* Bottom Row: Checkboxes and Delete */}
-                          <div className="flex items-center justify-between border-t border-[var(--border-main)] pt-3">
+                          <div className={`flex items-center justify-between border-t pt-3 ${field.name.trim() === '' ? 'border-red-200' : 'border-[var(--border-main)]'}`}>
                             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                               {/* Required Checkbox */}
                               <label className="flex cursor-pointer items-center gap-2">
@@ -278,7 +321,7 @@ export default function AdminSubDepartmentsPage() {
                             {/* Remove Button */}
                             <button
                               onClick={() => removeField(field.id)}
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-light)] transition-colors hover:bg-red-50 hover:text-[var(--danger)]"
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${field.name.trim() === '' ? 'text-[var(--danger)] hover:bg-red-100' : 'text-[var(--text-light)] hover:bg-red-50 hover:text-[var(--danger)]'}`}
                               title="Remove Field"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -301,21 +344,31 @@ export default function AdminSubDepartmentsPage() {
                     </button>
                   </div>
 
-                  {/* Submit Button */}
+                  {/* Submit Button & Validation Messages */}
                   <div className="mt-8 border-t border-[var(--border-main)] pt-6">
+                    {hasEmptyCustomField && (
+                      <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-[var(--danger)]">
+                        <svg className="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        Please provide a name for all custom fields before saving.
+                      </div>
+                    )}
                     <button
                       onClick={handleCreate}
-                      disabled={!isFormValid}
+                      disabled={!isFormValid || isSubmitting}
                       className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-all 
-                        ${!isFormValid 
+                        ${(!isFormValid || isSubmitting)
                           ? 'cursor-not-allowed bg-[var(--primary-light)] opacity-70' 
                           : 'bg-[var(--primary)] shadow-md hover:bg-[var(--secondary)] hover:shadow-lg active:scale-[0.98]'
                         }`}
                     >
-                      Save Sub-Department
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      {isSubmitting ? 'Saving...' : 'Save Sub-Department'}
+                      {!isSubmitting && (
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                 </div>
