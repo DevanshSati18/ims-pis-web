@@ -18,21 +18,26 @@ export default function AdminUsersPage() {
   const router = useRouter();
 
   const users = useAppSelector((s) => s.adminUsers.items);
+  // 👈 NEW: Get the currently logged-in admin
+  const currentUser = useAppSelector((s: unknown) => s.auth?.user); 
 
   /* ---------------- CREATE USER ---------------- */
 
+  const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newMobile, setNewMobile] = useState(""); 
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "user">("user");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   /* ---------------- MANAGE USER ---------------- */
 
-  const [searchEmail, setSearchEmail] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   const selectedUser = useMemo(
-    () => users.find((u) => u.id === selectedUserId),
+    () => users.find((u: unknown) => (u.id || u._id) === selectedUserId),
     [users, selectedUserId]
   );
 
@@ -42,34 +47,54 @@ export default function AdminUsersPage() {
 
   /* ---------------- HANDLERS ---------------- */
 
-  const handleCreateUser = () => {
-    if (!newEmail.trim() || !newPassword.trim()) return;
+  const handleCreateUser = async () => {
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim() || !newMobile.trim()) return;
 
-    dispatch(
-      createUserAdmin({
-        email: newEmail.trim(),
-        password: newPassword,
-        role: newRole,
-      })
-    );
+    setIsSubmitting(true);
+    try {
+      await dispatch(
+        createUserAdmin({
+          name: newName.trim(), 
+          email: newEmail.trim(),
+          mobile: newMobile.trim(), 
+          password: newPassword,
+          role: newRole,
+        })
+      ).unwrap();
 
-    setNewEmail("");
-    setNewPassword("");
-    setNewRole("user");
+      alert(`${newRole === 'admin' ? 'Admin' : 'User'} created successfully!`);
+      setNewName("");
+      setNewEmail("");
+      setNewMobile("");
+      setNewPassword("");
+      setNewRole("user");
+    } catch (error) {
+      console.error("Failed to create user:", error);
+      alert("Failed to create user. Check console for details.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSearch = () => {
-    if (!searchEmail.trim()) return;
+    if (!searchQuery.trim()) return;
     
+    const query = searchQuery.trim().toLowerCase();
+
     const user = users.find(
-      (u) => u.email.toLowerCase() === searchEmail.trim().toLowerCase()
+      (u: unknown) => 
+        u.email?.toLowerCase() === query &&
+        u.email !== currentUser?.email // 👈 NEW: Prevent the active admin from searching themselves!
     );
-    setSelectedUserId(user ? user.id : null);
+    
+    const foundId = user ? (user.id || user._id) : null;
+    
+    setSelectedUserId(foundId);
     setHasSearched(true);
   };
 
   const clearSearch = () => {
-    setSearchEmail("");
+    setSearchQuery("");
     setSelectedUserId(null);
     setHasSearched(false);
   };
@@ -77,25 +102,25 @@ export default function AdminUsersPage() {
   const handleResetPassword = () => {
     if (!selectedUser) return;
 
-    const pwd = prompt(
-      `Enter new password for ${selectedUser.email}`
-    );
+    const pwd = prompt(`Enter new password for ${selectedUser.email}`);
     if (!pwd) return;
+
+    const safeId = selectedUser.id || (selectedUser as unknown)._id;
 
     dispatch(
       resetPasswordAdmin({
-        userId: selectedUser.id,
+        userId: safeId,
         password: pwd,
       })
     );
-
     alert("Password reset successfully");
   };
 
-  const isUserActive = selectedUser?.isActive === true;
+  const isUserActive = selectedUser?.isActive !== false; 
+  
   const handleToggleStatus = () => {
     if (!selectedUser) return;
-    const isCurrentlyActive = selectedUser.isActive ?? true;
+    const isCurrentlyActive = selectedUser.isActive !== false;
     const actionText = isCurrentlyActive ? "soft delete (suspend)" : "restore";
     
     const confirm = window.confirm(
@@ -104,20 +129,21 @@ export default function AdminUsersPage() {
 
     if (!confirm) return;
 
+    const safeId = selectedUser.id || (selectedUser as unknown)._id;
+
     dispatch(
       toggleUserStatusAdmin({
-        userId: selectedUser.id,
+        userId: safeId,
         isActive: !isCurrentlyActive,
       })
     );
   };
 
-  // Allow 'Enter' key to trigger search
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+    if (e.key === "Enter") handleSearch();
   };
+
+  const isFormValid = newName.trim() && newEmail.trim() && newPassword.trim() && newMobile.trim();
 
   return (
     <AdminRoute>
@@ -126,7 +152,6 @@ export default function AdminUsersPage() {
 
         <main className="mx-auto w-full max-w-5xl p-4 sm:p-6 lg:p-8">
           
-          {/* BREADCRUMB & HEADER */}
           <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Link
               href="/admin"
@@ -157,25 +182,51 @@ export default function AdminUsersPage() {
                 </h2>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-12 sm:items-end">
-                <div className="sm:col-span-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:items-end">
+                
+                <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
-                    Email Address
+                    Full Name <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
-                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] hover:border-[var(--primary-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                    placeholder="e.g. John Doe"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
+                    Email Address <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
                     placeholder="teacher@school.edu"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                   />
                 </div>
                 
-                <div className="sm:col-span-4">
+                <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
-                    Initial Password
+                    Mobile Number <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
-                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] hover:border-[var(--primary-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
+                    placeholder="+91 9876543210"
+                    type="tel"
+                    value={newMobile}
+                    onChange={(e) => setNewMobile(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
+                    Initial Password <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
                     placeholder="••••••••"
                     type="password"
                     value={newPassword}
@@ -183,7 +234,7 @@ export default function AdminUsersPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
                     Role
                   </label>
@@ -196,21 +247,22 @@ export default function AdminUsersPage() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-
-                <div className="sm:col-span-2">
-                  <button
-                    onClick={handleCreateUser}
-                    disabled={!newEmail || !newPassword}
-                    className={`flex h-[42px] w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all 
-                      ${(!newEmail || !newPassword) 
-                        ? 'cursor-not-allowed bg-[var(--primary-light)] opacity-70' 
-                        : 'bg-[var(--primary)] shadow-sm hover:bg-[var(--secondary)] hover:shadow-md active:scale-95'
-                      }`}
-                  >
-                    Create {newRole === "admin" ? "Admin" : "User"}
-                  </button>
-                </div>
               </div>
+              
+              <div className="mt-6 border-t border-[var(--border-main)] pt-6">
+                <button
+                  onClick={handleCreateUser}
+                  disabled={!isFormValid || isSubmitting}
+                  className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all sm:w-auto sm:px-8
+                    ${(!isFormValid || isSubmitting) 
+                      ? 'cursor-not-allowed bg-[var(--primary-light)] opacity-70' 
+                      : 'bg-[var(--primary)] shadow-md hover:bg-[var(--secondary)] hover:shadow-lg active:scale-95'
+                    }`}
+                >
+                  {isSubmitting ? 'Processing...' : `Create ${newRole === "admin" ? "Admin" : "User"}`}
+                </button>
+              </div>
+
             </div>
           </section>
 
@@ -236,10 +288,10 @@ export default function AdminUsersPage() {
                     </svg>
                     <input
                       className="w-full rounded-xl border border-[var(--border-main)] bg-[var(--bg-subtle)] py-3 pl-10 pr-4 text-sm outline-none transition-all placeholder:text-[var(--text-light)] focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)]"
-                      placeholder="Enter exact email address to find user..."
-                      value={searchEmail}
+                      placeholder="Enter exact email or mobile number..."
+                      value={searchQuery}
                       onChange={(e) => {
-                        setSearchEmail(e.target.value);
+                        setSearchQuery(e.target.value);
                         if (hasSearched) setHasSearched(false);
                       }}
                       onKeyDown={handleKeyDown}
@@ -252,7 +304,7 @@ export default function AdminUsersPage() {
                     >
                       Search
                     </button>
-                    {searchEmail && (
+                    {searchQuery && (
                       <button
                         onClick={clearSearch}
                         className="flex items-center justify-center rounded-xl border border-[var(--border-main)] bg-white px-4 py-3 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-gray-50 hover:text-[var(--danger)] active:scale-95"
@@ -266,12 +318,12 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
-                {!selectedUser && hasSearched && searchEmail && (
+                {!selectedUser && hasSearched && searchQuery && (
                   <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-[var(--danger)]">
                     <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    No account found with the email {searchEmail}. Please check for typos.
+                    No account found matching {searchQuery}. Please check for typos.
                   </div>
                 )}
               </div>
@@ -280,17 +332,21 @@ export default function AdminUsersPage() {
                 <div className="bg-[var(--bg-subtle)] p-5 sm:p-6 rounded-b-2xl">
                   <div className="rounded-xl border border-[var(--border-main)] bg-white p-5 shadow-sm sm:p-6">
                     
-                    {/* User Header Info */}
                     <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[var(--border-main)] pb-6 sm:flex-row sm:items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary-light)] text-xl font-bold text-white">
-                          {selectedUser.email.charAt(0).toUpperCase()}
+                      <div className="flex items-start gap-4 overflow-hidden w-full">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary-light)] text-xl font-bold text-white uppercase">
+                          {selectedUser.name ? selectedUser.name.charAt(0) : selectedUser.email.charAt(0)}
                         </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-[var(--text-main)]">
-                            {selectedUser.email}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-lg font-semibold text-[var(--text-main)]" title={selectedUser.name || selectedUser.email}>
+                            {selectedUser.name || selectedUser.email}
                           </h3>
-                          <div className="mt-1 flex items-center gap-2">
+                          {selectedUser.name && (
+                            <p className="truncate text-sm text-[var(--text-muted)]">
+                              {selectedUser.email}
+                            </p>
+                          )}
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
                             <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
                               selectedUser.role === 'admin' 
                                 ? 'bg-purple-50 text-purple-700 ring-purple-600/20' 
@@ -306,14 +362,19 @@ export default function AdminUsersPage() {
                               <svg className={`h-1.5 w-1.5 ${isUserActive ? 'fill-green-500' : 'fill-red-500'}`} viewBox="0 0 6 6" aria-hidden="true">
                                 <circle cx="3" cy="3" r="3" />
                               </svg>
-                              {isUserActive ? 'Active' : 'Soft Deleted (Suspended)'}
+                              {isUserActive ? 'Active' : 'Soft Deleted'}
                             </span>
+                            
+                            {(selectedUser as unknown).mobile && (
+                              <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                📱 {(selectedUser as unknown).mobile}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                       <button
                         onClick={handleResetPassword}
@@ -327,7 +388,10 @@ export default function AdminUsersPage() {
 
                       {selectedUser.role !== "admin" && (
                         <button
-                          onClick={() => router.push(`/admin/permissions?user=${selectedUser.id}`)}
+                          onClick={() => {
+                            const safeId = selectedUser.id || (selectedUser as unknown)._id;
+                            router.push(`/admin/permissions?user=${safeId}`);
+                          }}
                           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-main)] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-200"
                         >
                           <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

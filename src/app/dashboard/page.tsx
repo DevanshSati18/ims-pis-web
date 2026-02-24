@@ -15,7 +15,6 @@ import { SubDepartment } from "@/types/schema";
 
 /* ================= PERMISSION HELPERS (FRONTEND) ================= */
 
-// Case-Insensitive permission checking
 const hasReadAccess = (permissions: string[], deptKey: string, subKey: string) => {
   const targetRead = `${deptKey}:${subKey}:read`.toLowerCase();
   const targetWrite = `${deptKey}:${subKey}:write`.toLowerCase();
@@ -34,19 +33,13 @@ const hasWriteAccess = (permissions: string[], deptKey: string, subKey: string) 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
 
-  const departments = useAppSelector((s) => {
-    console.log(s);
-    
-    return s.departments});
+  const departments = useAppSelector((s) => s.departments);
   const subDepartments = useAppSelector((s) => s.subDepartments);
   const records = useAppSelector((s) => s.records.items);
   const user = useAppSelector((s) => s.auth.user);
   
-  const permissions = user?.visibleSubDepartments||[];
-  // console.log("1. DEPARTMENTS ARRAY:", departments);
-  console.log(user);
-  // console.log("2. SUBDEPARTMENTS OBJECT:", subDepartments);
-  // console.log("3. USER PERMISSIONS ARRAY:", permissions);
+  const permissions = user?.visibleSubDepartments || [];
+
   const [activeDept, setActiveDept] = useState<string | null>(null);
   const [activeSubDept, setActiveSubDept] = useState<SubDepartment | null>(null);
 
@@ -66,7 +59,6 @@ export default function DashboardPage() {
 
   const visibleDepartments = useMemo(() => {
     if (user?.role === "admin") return departments;
-
     return departments.filter((dept) =>
       (subDepartments[dept.key] || []).some((sd) =>
         hasReadAccess(permissions, dept.key, sd.key)
@@ -76,11 +68,8 @@ export default function DashboardPage() {
 
   const visibleSubDepartments = useMemo(() => {
     if (!activeDept) return [];
-
     const all = subDepartments[activeDept] || [];
-
     if (user?.role === "admin") return all;
-
     return all.filter((sd) =>
       hasReadAccess(permissions, activeDept, sd.key)
     );
@@ -102,6 +91,12 @@ export default function DashboardPage() {
       })
     );
   };
+
+  // Determine user rights for the currently selected sub-department
+  const isWriter = useMemo(() => {
+    if (!activeDept || !activeSubDept) return false;
+    return user?.role === "admin" || hasWriteAccess(permissions, activeDept, activeSubDept.key);
+  }, [user, permissions, activeDept, activeSubDept]);
 
   /* ---------------- RENDER ---------------- */
 
@@ -177,13 +172,7 @@ export default function DashboardPage() {
 
               {visibleDepartments.length === 0 && (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-main)] bg-[var(--bg-card)] py-12 text-center">
-                  <span className="text-[var(--text-light)]">
-                    <svg className="mx-auto mb-3 h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                  </span>
                   <p className="text-[var(--text-muted)]">No departments assigned to you.</p>
-                  <p className="mt-1 text-sm text-[var(--text-light)]">Contact an administrator to request access.</p>
                 </div>
               )}
             </div>
@@ -192,6 +181,14 @@ export default function DashboardPage() {
           {/* STEP 2: SUB-DEPARTMENTS */}
           {activeDept && !activeSubDept && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <button
+                onClick={() => setActiveDept(null)}
+                className="group mb-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--primary)]"
+              >
+                <span className="transition-transform group-hover:-translate-x-1">&larr;</span> 
+                Back to departments
+              </button>
+
               <h1 className="font-heading mb-8 text-3xl font-bold tracking-tight text-[var(--text-main)]">
                 Select Section
               </h1>
@@ -212,59 +209,58 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
-
-              <button
-                onClick={() => setActiveDept(null)}
-                className="group mt-8 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--primary)]"
-              >
-                <span className="transition-transform group-hover:-translate-x-1">&larr;</span> 
-                Back to departments
-              </button>
             </div>
           )}
 
           {/* STEP 3: RECORDS */}
           {activeDept && activeSubDept && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="mb-6 flex items-center justify-between">
+              <button
+                onClick={() => setActiveSubDept(null)}
+                className="group mb-4 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--primary)]"
+              >
+                <span className="transition-transform group-hover:-translate-x-1">&larr;</span> 
+                Back to sections
+              </button>
+
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <h1 className="font-heading text-3xl font-bold tracking-tight text-[var(--text-main)]">
                   {activeSubDept.name}
                 </h1>
+                
+                {/* NEW: Sleek View-Only Badge */}
+                {!isWriter && (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View Only Mode
+                  </div>
+                )}
               </div>
 
-              {/* WRITE ACCESS CHECK - Logic enforced securely behind the scenes */}
-              {user?.role === "admin" ||
-              hasWriteAccess(
-                permissions,
-                activeDept,
-                activeSubDept.key
-              ) ? (
+              {/* Only show creation panel if user has write access */}
+              {isWriter && (
                 <div className="mb-8 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 shadow-sm">
                   <RecordCreatePanel
                     departmentKey={activeDept}
                     subDepartment={activeSubDept}
                   />
                 </div>
-              ) : (
-                <div className="mb-6 flex items-center gap-3 rounded-xl border border-[var(--primary-light)] bg-[var(--bg-hover)] p-4 text-sm font-medium text-[var(--secondary)] shadow-sm">
-                  <svg className="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  You are currently in view-only mode for this section.
-                </div>
               )}
 
+              {/* Pass the 'canEdit' prop down so RecordList knows whether to hide the buttons */}
               <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 shadow-sm">
-                <RecordList records={records} subDepartment={activeSubDept} />
+                <h2 className="font-heading text-lg font-semibold text-[var(--text-main)] mb-4">
+                  Recent Inventory Entries
+                </h2>
+                <RecordList 
+                  records={records} 
+                  subDepartment={activeSubDept} 
+                  canEdit={isWriter} // NEW PROP
+                />
               </div>
-
-              <button
-                onClick={() => setActiveSubDept(null)}
-                className="group mt-8 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--primary)]"
-              >
-                <span className="transition-transform group-hover:-translate-x-1">&larr;</span> 
-                Back to sections
-              </button>
             </div>
           )}
         </main>

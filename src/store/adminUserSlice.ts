@@ -77,8 +77,24 @@ const adminUserSlice = createSlice({
           (u) => u.id === a.payload.userId
         );
         if (user) user.isActive = a.payload.isActive;
+      }).addCase(changeMobileAdmin.fulfilled, (state, action) => {
+        const user = state.items.find((u: unknown) => (u.id || u._id) === action.payload.userId);
+        if (user) {
+          (user as unknown).mobile = action.payload.mobile;
+        }
       });
   },
 });
-
+export const changeMobileAdmin = createAsyncThunk(
+  "adminUsers/changeMobile",
+  async (payload: { userId: string; mobile: string }, { rejectWithValue }) => {
+    try {
+      // Ensure this endpoint matches your backend route
+      const res = await api.put(`/users/${payload.userId}/mobile`, { mobile: payload.mobile });
+      return { userId: payload.userId, mobile: payload.mobile };
+    } catch (error: unknown) {
+      return rejectWithValue(error.response?.data || "Failed to update mobile number");
+    }
+  }
+);
 export default adminUserSlice.reducer;

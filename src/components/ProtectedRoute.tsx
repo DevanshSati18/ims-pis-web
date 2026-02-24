@@ -14,7 +14,7 @@ export default function ProtectedRoute({
     (state: RootState) => state.auth
   );
   const router = useRouter();
-
+console.log("Auth State Check:", { user, loading });
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
