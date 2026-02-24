@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
 
   const users = useAppSelector((s) => s.adminUsers.items);
   // 👈 NEW: Get the currently logged-in admin
-  const currentUser = useAppSelector((s: unknown) => s.auth?.user); 
+  const currentUser = useAppSelector((s) => s.auth?.user); 
 
   /* ---------------- CREATE USER ---------------- */
 
@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
   const [hasSearched, setHasSearched] = useState(false);
 
   const selectedUser = useMemo(
-    () => users.find((u: unknown) => (u.id || u._id) === selectedUserId),
+    () => users.find((u) => (u.id) === selectedUserId),
     [users, selectedUserId]
   );
 
@@ -56,7 +56,7 @@ export default function AdminUsersPage() {
         createUserAdmin({
           name: newName.trim(), 
           email: newEmail.trim(),
-          mobile: newMobile.trim(), 
+          mobile: Number(newMobile.trim()), 
           password: newPassword,
           role: newRole,
         })
@@ -82,12 +82,12 @@ export default function AdminUsersPage() {
     const query = searchQuery.trim().toLowerCase();
 
     const user = users.find(
-      (u: unknown) => 
+      (u) => 
         u.email?.toLowerCase() === query &&
         u.email !== currentUser?.email // 👈 NEW: Prevent the active admin from searching themselves!
     );
     
-    const foundId = user ? (user.id || user._id) : null;
+    const foundId = user ? (user.id) : null;
     
     setSelectedUserId(foundId);
     setHasSearched(true);
@@ -105,7 +105,7 @@ export default function AdminUsersPage() {
     const pwd = prompt(`Enter new password for ${selectedUser.email}`);
     if (!pwd) return;
 
-    const safeId = selectedUser.id || (selectedUser as unknown)._id;
+    const safeId = selectedUser.id;
 
     dispatch(
       resetPasswordAdmin({
@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
 
     if (!confirm) return;
 
-    const safeId = selectedUser.id || (selectedUser as unknown)._id;
+    const safeId = selectedUser.id;
 
     dispatch(
       toggleUserStatusAdmin({
@@ -365,9 +365,9 @@ export default function AdminUsersPage() {
                               {isUserActive ? 'Active' : 'Soft Deleted'}
                             </span>
                             
-                            {(selectedUser as unknown).mobile && (
+                            {selectedUser.mobile && (
                               <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                                📱 {(selectedUser as unknown).mobile}
+                                📱 {selectedUser.mobile}
                               </span>
                             )}
                           </div>
@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
                       {selectedUser.role !== "admin" && (
                         <button
                           onClick={() => {
-                            const safeId = selectedUser.id || (selectedUser as unknown)._id;
+                            const safeId = selectedUser.id;
                             router.push(`/admin/permissions?user=${safeId}`);
                           }}
                           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-main)] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-green-50 hover:text-green-700 hover:border-green-200"

@@ -202,7 +202,7 @@ export default function AdminSubDepartmentsPage() {
                 <option value="">-- Choose a Department --</option>
                 {departments.map((d) => (
                   <option key={d.key} value={d.key}>
-                    {d.name} ({d.key})
+                    {d.name}
                   </option>
                 ))}
               </select>

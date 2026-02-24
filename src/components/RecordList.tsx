@@ -144,7 +144,7 @@ export default function RecordList({ records, subDepartment, canEdit }: Props) {
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                       <span>{Object.keys(record.data || {}).length} Fields</span>
                       <span className="hidden sm:inline">•</span>
-                      <span>Updated: {(record as unknown).updatedAt ? formatDate((record as unknown).updatedAt) : "Recently"}</span>
+                      <span>Updated: {record .updatedAt ? formatDate(record.updatedAt) : "Recently"}</span>
                     </div>
                   </div>
                 )}
@@ -209,10 +209,10 @@ export default function RecordList({ records, subDepartment, canEdit }: Props) {
                   <div className="mt-6 border-t border-[var(--border-main)] pt-5">
                     <h4 className="mb-3 text-sm font-semibold text-[var(--text-main)]">Attached Documents</h4>
                     <div className="flex flex-wrap gap-3">
-                      {record.documents.map((doc: unknown) => (
+                      {record.documents.map((doc) => (
                         <a
                           key={doc.fileName}
-                          href={`${getBackendUrl()}/uploads/${doc.fileName}`}
+                          href={`${getBackendUrl()}/api/uploads/${doc.fileName}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 rounded-lg border border-[var(--border-main)] bg-white px-3 py-2 text-sm font-medium text-[var(--text-main)] shadow-sm transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"

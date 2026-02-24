@@ -11,9 +11,9 @@ export const fetchSubDepartmentsAdmin = createAsyncThunk(
         `/sub-departments/${departmentKey}`
       );
       return res.data;
-    } catch (error: any) {
+    } catch  {
       // Safely pass the backend error message to our Redux state
-      return rejectWithValue(error.response?.data || "Failed to fetch sub-departments");
+      return rejectWithValue("Failed to fetch sub-departments");
     }
   }
 );
@@ -36,9 +36,9 @@ export const createSubDepartmentAdmin = createAsyncThunk(
       // Some backends return the object nested inside a 'data' or 'subDepartment' key.
       // If your backend returns { success: true, data: {...} }, change this to: return res.data.data;
       return res.data; 
-    } catch (error: any) {
-      console.error("API POST Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || "Failed to create sub-department");
+    } catch {
+      // console.error("API POST Error:", error.response?.data || error.message);
+      return rejectWithValue("Failed to create sub-department");
     }
   }
 );
@@ -55,8 +55,8 @@ export const deleteSubDepartmentAdmin = createAsyncThunk(
         `/sub-departments/${payload.departmentKey}/${payload.key}`
       );
       return payload;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Failed to delete sub-department");
+    } catch {
+      return rejectWithValue( "Failed to delete sub-department");
     }
   }
 );

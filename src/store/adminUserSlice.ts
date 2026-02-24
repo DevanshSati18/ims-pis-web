@@ -17,9 +17,11 @@ export const fetchUsersAdmin = createAsyncThunk(
 export const createUserAdmin = createAsyncThunk(
   "adminUsers/create",
   async (payload: {
+    name : string,
     email: string;
     password: string;
     role: "admin" | "user";
+    mobile : number;
   }) => {
     const res = await api.post<AdminUser>("/users", payload);
     return res.data;
@@ -78,9 +80,9 @@ const adminUserSlice = createSlice({
         );
         if (user) user.isActive = a.payload.isActive;
       }).addCase(changeMobileAdmin.fulfilled, (state, action) => {
-        const user = state.items.find((u: unknown) => (u.id || u._id) === action.payload.userId);
+        const user = state.items.find((u) => (u.id) === action.payload.userId);
         if (user) {
-          (user as unknown).mobile = action.payload.mobile;
+          user.mobile = Number(action.payload.mobile);
         }
       });
   },
@@ -92,8 +94,8 @@ export const changeMobileAdmin = createAsyncThunk(
       // Ensure this endpoint matches your backend route
       const res = await api.put(`/users/${payload.userId}/mobile`, { mobile: payload.mobile });
       return { userId: payload.userId, mobile: payload.mobile };
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to update mobile number");
+    } catch  {
+      return rejectWithValue( "Failed to update mobile number");
     }
   }
 );

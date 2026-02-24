@@ -13,8 +13,8 @@ export const fetchRecords = createAsyncThunk(
     try {
       const res = await api.get<RecordItem[]>("/records", { params });
       return res.data;
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to fetch records");
+    } catch {
+      return rejectWithValue("Failed to fetch records");
     }
   }
 );
@@ -33,8 +33,8 @@ export const createRecord = createAsyncThunk(
     try {
       const res = await api.post<RecordItem>("/records", payload);
       return res.data;
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to create record");
+    } catch {
+      return rejectWithValue("Failed to create record");
     }
   }
 );
@@ -58,8 +58,8 @@ export const uploadRecordFile = createAsyncThunk(
       );
 
       return res.data;
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to upload document");
+    } catch  {
+      return rejectWithValue( "Failed to upload document");
     }
   }
 );
@@ -71,8 +71,8 @@ export const deleteRecord = createAsyncThunk(
     try {
       await api.delete(`/records/${recordId}`);
       return recordId; // Return the ID so the reducer can remove it from the UI
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to delete record");
+    } catch  {
+      return rejectWithValue( "Failed to delete record");
     }
   }
   
@@ -91,8 +91,8 @@ export const updateRecord = createAsyncThunk(
         data: payload.data,
       });
       return res.data;
-    } catch (error: unknown) {
-      return rejectWithValue(error.response?.data || "Failed to update record");
+    } catch  {
+      return rejectWithValue("Failed to update record");
     }
   }
 );
@@ -152,8 +152,8 @@ const recordSlice = createSlice({
       .addCase(uploadRecordFile.fulfilled, (state, action) => {
         // Since your backend returns the updated record item after upload,
         // we replace the old record with the new one containing the file data.
-        if (action.payload && (action.payload as unknown)._id) {
-          const index = state.items.findIndex(r => (r as unknown)._id === (action.payload as unknown)._id);
+        if (action.payload && (action.payload._id)) {
+          const index = state.items.findIndex(r => r._id === action.payload._id);
           if (index !== -1) {
             state.items[index] = action.payload;
           }
@@ -166,7 +166,7 @@ const recordSlice = createSlice({
       /* --- DELETE --- */
       .addCase(deleteRecord.fulfilled, (state, action) => {
         // Filter out the deleted record from the UI immediately
-        state.items = state.items.filter((record: unknown) => record._id !== action.payload);
+        state.items = state.items.filter((record) => record._id !== action.payload);
       })
       .addCase(deleteRecord.rejected, (state, action) => {
         state.error = action.payload as string;
@@ -174,7 +174,7 @@ const recordSlice = createSlice({
       /* --- UPDATE --- */
       .addCase(updateRecord.fulfilled, (state, action) => {
         // Find the edited record and replace it with the fresh data from the backend
-        const index = state.items.findIndex(r => (r as unknown)._id === (action.payload as unknown)._id);
+        const index = state.items.findIndex(r => r._id === action.payload._id);
         if (index !== -1) {
           state.items[index] = action.payload;
         }

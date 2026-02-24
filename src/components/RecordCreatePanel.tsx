@@ -74,11 +74,11 @@ export default function RecordCreatePanel({
       setFiles({});
       alert("Record created successfully!");
 
-    } catch (error: unknwon) {
-      console.error("Failed to create record:", error);
+    } catch (error) {
+      // console.error("Failed to create record:", error);
       // Better error formatting so it doesn't just say "{}"
-      const errorMsg = typeof error === 'string' ? error : error?.message || "Check your backend terminal for the exact error.";
-      alert(`Failed to save the record: ${errorMsg}`);
+      // const errorMsg = typeof error === 'string' ? error : error?.message || "Check your backend terminal for the exact error.";
+      alert(`Failed to save the record`);
     } finally {
       setIsSubmitting(false);
     }
