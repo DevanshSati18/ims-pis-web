@@ -98,7 +98,7 @@ export default function RecordList({ records, subDepartment, canEdit }: Props) {
   };
 
   const getBackendUrl = () => {
-    return process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5050';
+    return 'https://ims.pisggn.com';
   };
 
   return (
@@ -212,7 +212,7 @@ export default function RecordList({ records, subDepartment, canEdit }: Props) {
                       {record.documents.map((doc) => (
                         <a
                           key={doc.fileName}
-                          href={`${getBackendUrl()}/api/uploads/${doc.fileName}`}
+                          href={`${getBackendUrl()}/uploads/${doc.fileName}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 rounded-lg border border-[var(--border-main)] bg-white px-3 py-2 text-sm font-medium text-[var(--text-main)] shadow-sm transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
